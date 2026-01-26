@@ -153,11 +153,13 @@ export const Dashboard = () => {
       (acc, u) => {
         acc.total += 1;
         if (u.role === "employee") acc.employees += 1;
-        if (u.role === "teacher" || u.role === "tech_staff") acc.teachers += 1;
-        if (u.role === "principal" || u.role === "vice_principal") acc.principals += 1;
+        if (u.role === "teacher") acc.teachers += 1;
+        if (u.role === "tech_staff") acc.techStaff += 1;
+        if (u.role === "principal") acc.principals += 1;
+        if (u.role === "vice_principal") acc.vicePrincipals += 1;
         return acc;
       },
-      { total: 0, employees: 0, teachers: 0, principals: 0 }
+      { total: 0, employees: 0, teachers: 0, techStaff: 0, principals: 0, vicePrincipals: 0 }
     );
 
     const sorted = rows
@@ -311,8 +313,10 @@ export const Dashboard = () => {
             headline={isLoading ? "—" : `${employeeStats.total} accounts`}
             rows={[
               // { label: "Employees", value: isLoading ? "—" : employeeStats.employees },
-              { label: "Teachers", value: isLoading ? "—" : employeeStats.teachers },
               { label: "Principals", value: isLoading ? "—" : employeeStats.principals },
+              { label: "Vice Principals", value: isLoading ? "—" : employeeStats.vicePrincipals },
+              { label: "Teachers", value: isLoading ? "—" : employeeStats.teachers },
+              { label: "Tech Staff", value: isLoading ? "—" : employeeStats.techStaff },
             ]}
             onClick={() => navigate("/layout/employees")}
           />
