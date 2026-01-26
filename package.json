@@ -1,0 +1,35 @@
+{
+  "name": "nard-foundation",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:full": "node -e \"const { spawn } = require('child_process'); const isWin = process.platform === 'win32'; const spawnNpm = (cwd, script) => isWin ? spawn('cmd.exe', ['/d','/s','/c','npm','run',script], { cwd, stdio: 'inherit' }) : spawn('npm', ['run', script], { cwd, stdio: 'inherit' }); const ping = async (url, ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); try { const r = await fetch(url, { signal: c.signal }); return r.ok; } catch { return false; } finally { clearTimeout(t); } }; (async () => { const backendUp = await ping('http://localhost:4000/api/health', 400); if (!backendUp) spawnNpm('backend', 'dev'); spawnNpm(process.cwd(), 'dev'); })();\"",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "formik": "^2.4.6",
+    "lucide-react": "^0.544.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.3",
+    "sonner": "^2.0.7",
+    "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.12"
+  }
+}
