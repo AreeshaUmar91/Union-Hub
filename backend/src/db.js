@@ -202,20 +202,43 @@ async function migrateIfNeeded() {
 
 // --- DB Interface ---
 
+let cachedPromise = null;
+
 export function createDb({ dbPath }) {
   return {
     async connect() {
-      if (mongoose.connection.readyState === 1) return;
+      if (mongoose.connection.readyState === 1) {
+        return;
+      }
+
+      if (cachedPromise) {
+        await cachedPromise;
+        if (mongoose.connection.readyState === 1) return;
+      }
+
       const uri = process.env.MONGODB_URI;
       if (!uri) throw new Error("MONGODB_URI is missing in .env");
       
+      const isVercel = process.env.VERCEL || process.env.VITE_VERCEL === '1';
+
       // Use lower timeout for serverless to fail fast if connection issues
-      await mongoose.connect(uri, {
+      // maxPoolSize: 1 is recommended for serverless functions
+      cachedPromise = mongoose.connect(uri, {
         serverSelectionTimeoutMS: 5000,
+        maxPoolSize: isVercel ? 1 : 10,
+        socketTimeoutMS: 45000,
+        family: 4 // Use IPv4 to avoid potential IPv6 timeouts
+      }).then((mongoose) => {
+        return mongoose;
+      }).catch((e) => {
+        cachedPromise = null;
+        throw e;
       });
 
+      await cachedPromise;
+
       // Skip migration in Vercel environment to prevent function timeouts
-      if (!process.env.VERCEL && process.env.VITE_VERCEL !== '1') {
+      if (!isVercel) {
         await migrateIfNeeded();
       }
     },
