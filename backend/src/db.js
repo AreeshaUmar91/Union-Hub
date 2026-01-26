@@ -215,7 +215,7 @@ export function createDb({ dbPath }) {
       });
 
       // Skip migration in Vercel environment to prevent function timeouts
-      if (process.env.VITE_VERCEL !== '1') {
+      if (!process.env.VERCEL && process.env.VITE_VERCEL !== '1') {
         await migrateIfNeeded();
       }
     },

@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 
 // Middleware to ensure DB is connected for serverless environments
 app.use(async (req, res, next) => {
-  if (process.env.VITE_VERCEL === '1') {
+  if (process.env.VERCEL || process.env.VITE_VERCEL === '1') {
     try {
       await db.connect();
     } catch (e) {
@@ -61,7 +61,7 @@ app.get("*", (req, res) => {
 export default app;
 
 // Only start the server if we are running it directly (not imported)
-if (process.env.VITE_VERCEL !== '1') {
+if (!process.env.VERCEL && process.env.VITE_VERCEL !== '1') {
   // Connect to DB before listening
   db.connect()
     .then(() => {
