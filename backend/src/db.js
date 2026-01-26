@@ -208,8 +208,16 @@ export function createDb({ dbPath }) {
       if (mongoose.connection.readyState === 1) return;
       const uri = process.env.MONGODB_URI;
       if (!uri) throw new Error("MONGODB_URI is missing in .env");
-      await mongoose.connect(uri);
-      await migrateIfNeeded();
+      
+      // Use lower timeout for serverless to fail fast if connection issues
+      await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 5000,
+      });
+
+      // Skip migration in Vercel environment to prevent function timeouts
+      if (process.env.VITE_VERCEL !== '1') {
+        await migrateIfNeeded();
+      }
     },
 
     async getDirectorCount() {
