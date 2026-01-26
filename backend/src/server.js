@@ -20,6 +20,18 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Middleware to ensure DB is connected for serverless environments
+app.use(async (req, res, next) => {
+  if (process.env.VITE_VERCEL === '1') {
+    try {
+      await db.connect();
+    } catch (e) {
+      console.error("DB Connect error:", e);
+    }
+  }
+  next();
+});
+
 app.use(express.json({ limit: "1mb" }));
 app.use(
   cors({
@@ -45,15 +57,21 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-// Connect to DB before listening
-db.connect()
-  .then(() => {
-    startScheduler(db);
-    app.listen(port, () => {
-      process.stdout.write(`Backend listening on http://localhost:${port}\n`);
+// For Vercel, we export the app
+export default app;
+
+// Only start the server if we are running it directly (not imported)
+if (process.env.VITE_VERCEL !== '1') {
+  // Connect to DB before listening
+  db.connect()
+    .then(() => {
+      startScheduler(db);
+      app.listen(port, () => {
+        process.stdout.write(`Backend listening on http://localhost:${port}\n`);
+      });
+    })
+    .catch((err) => {
+      console.error("Failed to connect to DB:", err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error("Failed to connect to DB:", err);
-    process.exit(1);
-  });
+}
