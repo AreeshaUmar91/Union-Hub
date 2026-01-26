@@ -10,26 +10,31 @@ import { CustomToast } from "../components/CustomToast";
 
 export const Vote = () => {
   const auth = useAuth();
-  const isDirector = auth.user?.role === "director";
+  const isDirector = ["director", "principal", "vice_principal"].includes(auth.user?.role);
   const [showForm, setShowForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-const [showDiscardModal, setShowDiscardModal] = useState(false);
-const [isCancelDiscard, setIsCancelDiscard] = useState(true);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [isCancelDiscard, setIsCancelDiscard] = useState(true);
+  const [showVoteModal, setShowVoteModal] = useState(false);
+  const [pendingVote, setPendingVote] = useState(null);
 
   const [pollName, setPollName] = useState("");
   const [pollDesc, setPollDesc] = useState("");
+  const [targetRole, setTargetRole] = useState("other");
   const [endDate, setEndDate] = useState("");
   const [candidates, setCandidates] = useState([
-    { name: "", image: mediaData.Camera, votes: 0 },
-    { name: "", image: mediaData.Camera, votes: 0 },
-    { name: "", image: mediaData.Camera, votes: 0 },
+    { name: "", email: "", image: mediaData.Camera, votes: 0 },
+    { name: "", email: "", image: mediaData.Camera, votes: 0 },
+    { name: "", email: "", image: mediaData.Camera, votes: 0 },
   ]);
   const [polls, setPolls] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [modalType, setModalType] = useState(""); // "created" or "updated"
+  const [users, setUsers] = useState([]);
+  const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
     if (!auth.token) return;
@@ -41,10 +46,26 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
       .catch(() => {});
   }, [auth.token]);
 
+  useEffect(() => {
+    if (isDirector && auth.token) {
+      apiRequest("/director/users", { token: auth.token })
+        .then((data) => setUsers(data.users || []))
+        .catch(() => {});
+    }
+  }, [isDirector, auth.token]);
+
+  const getPollStatus = (poll) => {
+    if (!poll.endDate) return "pending";
+    const end = new Date(poll.endDate);
+    const now = new Date();
+    return end < now ? "completed" : "pending";
+  };
+
   const filteredPolls = polls.filter(
     (poll) =>
-      poll.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poll.description.toLowerCase().includes(searchQuery.toLowerCase())
+      getPollStatus(poll) === activeTab &&
+      (poll.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      poll.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleImageUpload = (e, idx) => {
@@ -101,11 +122,12 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
 
       setPollName("");
       setPollDesc("");
+      setTargetRole("other");
       setEndDate("");
       setCandidates([
-        { name: "", image: mediaData.Camera, votes: 0 },
-        { name: "", image: mediaData.Camera, votes: 0 },
-        { name: "", image: mediaData.Camera, votes: 0 },
+        { name: "", email: "", image: mediaData.Camera, votes: 0 },
+        { name: "", email: "", image: mediaData.Camera, votes: 0 },
+        { name: "", email: "", image: mediaData.Camera, votes: 0 },
       ]);
       setEditIndex(null);
     } catch (e) {
@@ -117,10 +139,46 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
     if (!isDirector) return;
     setPollName(poll.name);
     setPollDesc(poll.description);
+    setTargetRole(poll.targetRole || "other");
     setEndDate(poll.endDate || "");
     setCandidates(poll.candidates);
     setShowForm(true);
     setEditIndex(idx);
+  };
+
+  const handleVoteClick = (pollIndex, candidateIndex) => {
+    setPendingVote({ pollIndex, candidateIndex });
+    setShowVoteModal(true);
+  };
+
+  const confirmVote = async () => {
+    if (!pendingVote) return;
+    const { pollIndex, candidateIndex } = pendingVote;
+    await handleVote(pollIndex, candidateIndex);
+    setShowVoteModal(false);
+    setPendingVote(null);
+  };
+
+  const handleVote = async (pollIndex, candidateIndex) => {
+    const poll = polls[pollIndex];
+    if (!auth.token || !poll.id) return;
+    
+    try {
+      const response = await apiRequest(`/content/votes/${poll.id}/vote`, {
+        method: "POST",
+        token: auth.token,
+        body: { candidateIndex },
+      });
+      
+      const updatedPolls = [...polls];
+      updatedPolls[pollIndex].candidates = response.candidates;
+      updatedPolls[pollIndex].votedUsers = response.votedUsers;
+      setPolls(updatedPolls);
+      
+      toast.custom((t) => <CustomToast id={t} message="Vote submitted successfully!" type="success" />);
+    } catch (e) {
+      toast.custom((t) => <CustomToast id={t} message={e?.message || "Failed to vote"} type="error" />);
+    }
   };
 
   return (
@@ -140,11 +198,12 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
                 setEditIndex(null);
                 setPollName("");
                 setPollDesc("");
+                setTargetRole("other");
                 setEndDate("");
                 setCandidates([
-                  { name: "", image: mediaData.Camera, votes: 0 },
-                  { name: "", image: mediaData.Camera, votes: 0 },
-                  { name: "", image: mediaData.Camera, votes: 0 },
+                  { name: "", email: "", image: mediaData.Camera, votes: 0 },
+                  { name: "", email: "", image: mediaData.Camera, votes: 0 },
+                  { name: "", email: "", image: mediaData.Camera, votes: 0 },
                 ]);
               }}
             >
@@ -153,6 +212,28 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
             </button>
           ) : null}
         </div>
+
+        {/* Tabs */}
+        {!showForm && (
+          <div className="flex gap-4 border-b px-2 sm:px-0 mb-4">
+            <button
+              className={`pb-2 px-4 font-montserrat font-semibold ${
+                activeTab === "pending" ? "text-primary border-b-2 border-primary" : "text-grey"
+              }`}
+              onClick={() => setActiveTab("pending")}
+            >
+              Upcoming
+            </button>
+            <button
+              className={`pb-2 px-4 font-montserrat font-semibold ${
+                activeTab === "completed" ? "text-primary border-b-2 border-primary" : "text-grey"
+              }`}
+              onClick={() => setActiveTab("completed")}
+            >
+              Completed
+            </button>
+          </div>
+        )}
 
         {/* Search Bar */}
         {!showForm && (
@@ -176,6 +257,21 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
         {showForm && isDirector ? (
           <div className="flex flex-col items-start gap-6">
             <div className="w-full rounded-[10px] p-2 sm:p-4 flex flex-col gap-6 shadow-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-[80px]">
+                <label className="font-montserrat font-semibold text-[16px] text-grey whitespace-nowrap">Poll Type</label>
+                <select
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  className="flex-1 border rounded-xl px-3 py-2 text-black font-montserrat bg-[#F1F1F1]"
+                >
+                  <option value="other">General / Other</option>
+                  <option value="principal">Selecting Principal</option>
+                  <option value="vice_principal">Selecting Vice Principal</option>
+                  <option value="teacher">Selecting Teacher</option>
+                  <option value="tech_staff">Selecting Tech Staff</option>
+                </select>
+              </div>
+
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-[80px]">
                 <label className="font-montserrat font-semibold text-[16px] text-grey whitespace-nowrap">Poll Name</label>
                 <input
@@ -212,7 +308,7 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
             {/* Add Candidate Button */}
             <div className="flex justify-end w-full">
               <button
-                onClick={() => setCandidates([...candidates, { name: "", image: mediaData.Camera, votes: 0 }])}
+                onClick={() => setCandidates([...candidates, { name: "", email: "", image: mediaData.Camera, votes: 0 }])}
                 className="w-full sm:w-[252px] h-[44px] flex items-center justify-center gap-2 bg-pink text-white rounded-[22px] px-4 py-2 font-semibold shadow-md"
               >
                 <span className="text-[24px] leading-none">+</span>
@@ -246,17 +342,64 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
                         onChange={(e) => handleImageUpload(e, idx)}
                       />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="Enter Name"
-                      value={c.name}
-                      onChange={(e) => {
-                        const newCands = [...candidates];
-                        newCands[idx].name = e.target.value;
-                        setCandidates(newCands);
-                      }}
-                      className="w-full sm:flex-1 border text-black rounded-xl px-3 py-2 font-montserrat bg-[#F1F1F1]"
-                    />
+                    <div className="flex flex-col gap-2 w-full sm:flex-1">
+                      <input
+                        type="text"
+                        list={`users-list-${idx}`}
+                        placeholder="Enter Email"
+                        value={c.email || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const found = users.find((u) => u.email === val);
+                          
+                          if (found && found.role === targetRole) {
+                            toast.custom((t) => (
+                              <CustomToast 
+                                id={t} 
+                                message={`Cannot select current ${found.role} for this poll`} 
+                                type="error" 
+                              />
+                            ));
+                            return;
+                          }
+
+                          const newCands = [...candidates];
+                          newCands[idx].email = val;
+                          if (found && found.name) {
+                            newCands[idx].name = found.name;
+                          }
+                          setCandidates(newCands);
+                        }}
+                        className="w-full border text-black rounded-xl px-3 py-2 font-montserrat bg-[#F1F1F1]"
+                      />
+                      <datalist id={`users-list-${idx}`}>
+                        {users
+                          .filter((u) => {
+                            // Base allowed roles for candidates (expanded to include admins if they are running for something else)
+                            const allowedRoles = ["teacher", "tech_staff", "vice_principal", "principal"];
+                            if (!allowedRoles.includes(u.role)) return false;
+                            // Exclude if user holds the role being voted for
+                            if (u.role === targetRole) return false;
+                            return true;
+                          })
+                          .map((u, i) => (
+                            <option key={i} value={u.email}>
+                              {u.name} ({u.role})
+                            </option>
+                          ))}
+                      </datalist>
+                      <input
+                        type="text"
+                        placeholder="Enter Name"
+                        value={c.name}
+                        onChange={(e) => {
+                          const newCands = [...candidates];
+                          newCands[idx].name = e.target.value;
+                          setCandidates(newCands);
+                        }}
+                        className="w-full border text-black rounded-xl px-3 py-2 font-montserrat bg-[#F1F1F1]"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -288,14 +431,16 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
     <div className="bg-white rounded-[10px] w-full h-[271px] flex items-center justify-center">
       <div className="flex flex-col items-center justify-center gap-4">
         <img src={mediaData.Nomeeting} alt="content" className="w-[140px] h-[140px] object-cover rounded" />
-        <h3 className="font-montserrat font-semibold text-[18px] text-black text-center">No Polls Created Yet...</h3>
+        <h3 className="font-montserrat font-semibold text-[18px] text-black text-center">No {activeTab} Polls...</h3>
         <p className="font-montserrat font-normal text-grey text-[14px] text-center">
-          Create a poll to start collecting votes.
+          {activeTab === "pending" ? "Create a poll to start collecting votes." : "No completed polls found."}
         </p>
       </div>
     </div>
   ) : (
-    filteredPolls.map((poll, idx) => (
+    filteredPolls.map((poll, idx) => {
+      const isCandidate = poll.candidates.some(c => c.email && c.email === auth.user?.email);
+      return (
       <div key={idx} className="flex-1 w-full sm:min-w-[48%] sm:max-w-[48%]">
         <div className="rounded-[10px] p-2 sm:p-4 shadow-md flex flex-col gap-4">
           {/* Poll Header */}
@@ -306,12 +451,14 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
             </div>
             {isDirector ? (
               <div className="flex gap-2">
-                <img
-                  src={mediaData.Edit}
-                  alt="update"
-                  className="w-5 h-5 cursor-pointer"
-                  onClick={() => handleEdit(poll, idx)}
-                />
+                {activeTab !== "completed" && (
+                  <img
+                    src={mediaData.Edit}
+                    alt="update"
+                    className="w-5 h-5 cursor-pointer"
+                    onClick={() => handleEdit(poll, idx)}
+                  />
+                )}
                 <img
                   src={mediaData.Recycle}
                   alt="delete"
@@ -328,21 +475,46 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
           {/* Candidates */}
           <div className="flex flex-col gap-4">
             {poll.candidates.map((c, i) => (
-              <div key={i} className="w-full rounded-xl p-2 sm:p-4 flex flex-col gap-2 shadow-[0_0_14px_0_rgba(0,0,0,0.1)]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div key={i} className="w-full rounded-xl p-2 sm:p-4 flex items-center justify-between gap-4 shadow-[0_0_14px_0_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-4">
                   <img src={c.image} alt={c.name} className="w-[60px] h-[60px] object-cover rounded-full" />
                   <p className="font-montserrat font-semibold text-black">{c.name}</p>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <img src={mediaData.Votingbox} alt="vote" className="w-6 h-6" />
-                  <span className="text-grey font-semibold">{c.votes} Votes</span>
+                
+                <div className="flex items-center gap-4">
+                  {isDirector && (
+                    <div className="flex items-center gap-2">
+                      <img src={mediaData.Votingbox} alt="vote" className="w-6 h-6" />
+                      <span className="text-grey font-semibold">{c.votes} {c.votes > 1 ? "Votes" : "Vote"}</span>
+                    </div>
+                  )}
+                  
+                  {/* Vote Button - Hidden for Admins and Candidates */}
+                  {!isDirector && !isCandidate && (
+                    !poll.votedUsers?.includes(auth.user?.id) && activeTab !== "completed" ? (
+                      <button
+                        onClick={() => handleVote(idx, i)}
+                        className="bg-primary text-white text-sm px-4 py-2 rounded-lg hover:bg-opacity-90 transition font-montserrat font-semibold shadow-sm"
+                      >
+                        Vote
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="bg-gray-300 text-white text-sm px-4 py-2 rounded-lg cursor-not-allowed font-montserrat font-semibold"
+                      >
+                        {activeTab === "completed" ? "Ended" : "Voted"}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
-    ))
+      );
+    })
   )}
 </div>
 
@@ -405,6 +577,8 @@ const [isCancelDiscard, setIsCancelDiscard] = useState(true);
         setShowForm(false);
         setPollName("");
         setPollDesc("");
+        setTargetRole("other");
+        setEndDate("");
         setCandidates([
           { name: "", image: mediaData.Camera, votes: 0 },
           { name: "", image: mediaData.Camera, votes: 0 },

@@ -93,7 +93,7 @@ export const Bigformcard = ({ initialData, onCreate, onCancel }) => {
             <input
               type="date"
               value={date}
-              min={!initialData ? new Date().toISOString().split("T")[0] : undefined}
+              min={new Date().toISOString().split("T")[0]}
               onChange={(e) => setDate(e.target.value)}
               className={`w-full sm:w-[320px] rounded-lg bg-[#F1F1F1] px-3 py-2 focus:outline-none ${
                 date ? "text-black" : "text-gray-400"

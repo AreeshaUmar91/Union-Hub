@@ -77,6 +77,53 @@ export function createContentRouter({ db, jwtSecret }) {
     return role === "director";
   }
 
+  // Specific route for casting a vote
+  router.post("/votes/:id/vote", async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    const { candidateIndex } = req.body;
+    if (candidateIndex === undefined || candidateIndex === null) {
+      res.status(400).json({ error: "Candidate index required" });
+      return;
+    }
+
+    // Lock mechanism or atomic update would be ideal, but for now we use read-modify-write
+    // Since this is a simple implementation using JSON storage
+    const item = await db.getContentById("votes", id);
+    if (!item) {
+      res.status(404).json({ error: "Poll not found" });
+      return;
+    }
+
+    const data = item.data || {};
+    const votedUsers = data.votedUsers || [];
+    const userId = req.user.id;
+
+    if (votedUsers.includes(userId)) {
+      res.status(400).json({ error: "You have already voted in this poll" });
+      return;
+    }
+
+    const candidates = data.candidates || [];
+    if (!candidates[candidateIndex]) {
+      res.status(400).json({ error: "Invalid candidate" });
+      return;
+    }
+
+    // Update vote count
+    candidates[candidateIndex].votes = (candidates[candidateIndex].votes || 0) + 1;
+    votedUsers.push(userId);
+
+    const updatedData = { ...data, candidates, votedUsers };
+    await db.updateContent({ type: "votes", id, data: updatedData });
+
+    res.json({ success: true, candidates, votedUsers });
+  });
+
   router.get("/:type", async (req, res) => {
     const type = normalizeType(req.params.type);
     if (!type) {
@@ -198,6 +245,32 @@ export function createContentRouter({ db, jwtSecret }) {
 
     // Notify Directors
     await notifyDirectors("Updated", type, item.data, req.user);
+
+    // Send broadcast email for meeting reschedule (update)
+    if (type === "meetings" && req.body.status !== "completed") {
+      (async () => {
+        try {
+          const emails = await db.getAllUserEmails();
+          if (emails && emails.length > 0) {
+            const contentTitle = item.data.title || "Meeting";
+            const subject = `Meeting Update: ${contentTitle}`;
+            const htmlContent = `
+              <div style="font-family: Arial, sans-serif;">
+                <p>Hello,</p>
+                <p>The meeting <strong>${contentTitle}</strong> has been updated/rescheduled.</p>
+                <p>Please log in to Union Hub to view the new details.</p>
+                <br/>
+                <p>Best regards,</p>
+                <p>Union Hub Team</p>
+              </div>
+            `;
+            await sendBroadcastEmail(emails, subject, htmlContent);
+          }
+        } catch (err) {
+          console.error(`Failed to send broadcast email for meeting update:`, err);
+        }
+      })();
+    }
 
     res.json({ item });
   });

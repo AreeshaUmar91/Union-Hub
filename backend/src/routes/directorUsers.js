@@ -56,7 +56,7 @@ export function createDirectorUsersRouter({ db, jwtSecret }) {
     return false;
   };
 
-  router.get("/", requireRole(["director", "principal"]), async (req, res) => {
+  router.get("/", requireRole(["director", "principal", "vice_principal"]), async (req, res) => {
     const users = await db.listAssignedUsers();
     res.json({ users });
   });

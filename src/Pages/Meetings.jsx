@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Check } from "lucide-react";
 import { mediaData } from "../utils/mediaData";
 import { Bigformcard } from "../components/Bigformcard";
 import { Customcard } from "../components/Customcard";
@@ -15,10 +15,12 @@ export const Meetings = ({ variant = "page" }) => {
   const [meetingData, setMeetingData] = useState([]); 
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalActionType, setModalActionType] = useState(""); 
   const [selectedMeetingId, setSelectedMeetingId] = useState(null); 
   const [showCustomCard, setShowCustomCard] = useState(false); 
+  const [activeTab, setActiveTab] = useState("upcoming");
   const headerColors = ["#05B9B926", "#FF8A1426", "#9B05B926", "#007FFF26"];
 
   useEffect(() => {
@@ -88,6 +90,40 @@ export const Meetings = ({ variant = "page" }) => {
     setShowForm(true);
   };
 
+  const handleCompleteMeeting = (id) => {
+    setSelectedMeetingId(id);
+    setShowCompleteModal(true);
+  };
+
+  const confirmCompleteMeeting = async () => {
+    if (!selectedMeetingId) return;
+    try {
+      const meeting = meetingData.find((m) => m.id === selectedMeetingId);
+      if (!meeting) return;
+
+      const updatedData = { ...meeting, status: "completed" };
+      // Omit id if it exists in data to avoid potential issues
+      delete updatedData.id;
+
+      const updated = await apiRequest(`/content/meetings/${selectedMeetingId}`, {
+        method: "PUT",
+        token: auth.token,
+        body: updatedData,
+      });
+
+      setMeetingData((prev) =>
+        prev.map((m) => (m.id === selectedMeetingId ? { ...m, status: "completed" } : m))
+      );
+      setModalActionType("update");
+      setShowImageModal(true);
+    } catch (e) {
+      toast.custom((t) => <CustomToast id={t} message={e?.message || "Failed to complete meeting"} type="error" />);
+    } finally {
+      setShowCompleteModal(false);
+      setSelectedMeetingId(null);
+    }
+  };
+
   const formatTime = (timeStr) => {
     if (!timeStr) return "";
     const [hour, minute] = timeStr.split(":");
@@ -96,11 +132,27 @@ export const Meetings = ({ variant = "page" }) => {
     return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   };
 
+  const getMeetingStatus = (meeting) => {
+    if (meeting.status === "completed") return "completed";
+    if (!meeting.date || !meeting.endTime) return "upcoming";
+    const endDateTime = new Date(`${meeting.date}T${meeting.endTime}`);
+    // If time has passed and not marked completed, it is "missing"
+    return endDateTime < new Date() ? "missing" : "upcoming";
+  };
+
+  const tabFiltered = meetingData.filter((m) => {
+    const status = getMeetingStatus(m);
+    if (activeTab === "upcoming") return status === "upcoming";
+    if (activeTab === "completed") return status === "completed";
+    if (activeTab === "missing") return status === "missing";
+    return true;
+  });
+
   const filteredMeetings = searchQuery
-    ? meetingData.filter((m) =>
+    ? tabFiltered.filter((m) =>
         (m.title || "").toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : meetingData;
+    : tabFiltered;
 
   const headingText = variant === "dashboard" ? "Meetings" : "Meetings List";
 
@@ -140,8 +192,26 @@ export const Meetings = ({ variant = "page" }) => {
             </div>
           )}
 
-          {/* Search Bar */}
+          {/* Tabs */}
           {!showForm && variant !== "dashboard" && (
+            <div className="flex gap-4 border-b border-gray-200 mb-6 px-1">
+              {["upcoming", "missing", "completed"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-2 px-4 font-montserrat font-semibold text-[16px] capitalize transition-colors relative ${
+                    activeTab === tab
+                      ? "text-[#1E6B78] border-b-2 border-[#1E6B78]"
+                      : "text-grey hover:text-black"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Search Bar */}{!showForm && variant !== "dashboard" && (
             <div className="w-full mb-4">
               <div className="relative w-full">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-grey">
@@ -169,8 +239,8 @@ export const Meetings = ({ variant = "page" }) => {
           ) : null}
 
           {/* Meeting Cards or Empty State */}
-          {!showForm && meetingData.length > 0 ? (
-            <>
+          {!showForm ? (
+            displayedMeetings.length > 0 ? (
               <div className={`flex flex-wrap gap-4 ${variant === "dashboard" ? "flex-col" : ""}`}>
                 {displayedMeetings.map((meeting, idx) => {
                   const headerColor = headerColors[idx % headerColors.length];
@@ -187,21 +257,32 @@ export const Meetings = ({ variant = "page" }) => {
                         className="w-full h-[50px] flex items-center justify-between px-3 rounded-md"
                         style={{ background: headerColor, borderLeft: `4px solid ${headerColor}` }}
                       >
-                        <h3 className="text-black font-semibold text-[16px]">{meeting.title}</h3>
+                        <h3 className="text-black font-semibold text-[16px] capitalize">{meeting.title}</h3>
                         {canManageMeetings ? (
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 items-center">
+                            {getMeetingStatus(meeting) !== "completed" && (
+                              <button
+                                onClick={() => handleCompleteMeeting(meeting.id)}
+                                className="w-5 h-5 flex items-center justify-center rounded-full border border-black hover:bg-green-100 transition-colors"
+                                title="Mark as Completed"
+                              >
+                                <Check className="w-3 h-3 text-black" />
+                              </button>
+                            )}
                             <img
                               src={mediaData.Recycle}
                               alt="recycle"
                               className="w-5 h-5 cursor-pointer"
                               onClick={() => handleDeleteMeeting(meeting.id)}
                             />
-                            <img
-                              src={mediaData.Edit}
-                              alt="edit"
-                              className="w-5 h-5 cursor-pointer"
-                              onClick={() => handleEditMeeting(meeting.id)}
-                            />
+                            {getMeetingStatus(meeting) !== "completed" && (
+                              <img
+                                src={mediaData.Edit}
+                                alt="edit"
+                                className="w-5 h-5 cursor-pointer"
+                                onClick={() => handleEditMeeting(meeting.id)}
+                              />
+                            )}
                           </div>
                         ) : null}
                       </div>
@@ -252,27 +333,28 @@ export const Meetings = ({ variant = "page" }) => {
                   );
                 })}
               </div>
-
-            </>
-          ) : !showForm ? (
-            // Empty state when no meetings
-            <div className="flex justify-center items-center h-[271px] bg-white rounded-[10px]">
-              <div className="flex flex-col items-center gap-[16px]">
-                <img
-                  src={mediaData.Nomeeting}
-                  alt="no meetings"
-                  className="w-[140px] h-[140px] object-cover rounded"
-                />
-                <h3 className="font-montserrat font-semibold text-[18px] text-black text-center">
-                  No Upcoming Meetings Yet...
-                </h3>
-                <p className="font-montserrat font-normal text-grey text-[14px] text-center">
-                  {canManageMeetings
-                    ? "Create a meeting so employees can view it here."
-                    : "No meetings have been posted yet."}
-                </p>
+            ) : !searchQuery ? (
+              // Empty state when no meetings (and no active search)
+              <div className="flex justify-center font-montserrat">
+                <div className="bg-white rounded-[10px] w-full max-w-full h-[271px] flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center gap-[16px]">
+                    <img
+                      src={mediaData.Nomeeting}
+                      alt="no meetings"
+                      className="w-[140px] h-[140px] object-cover rounded"
+                    />
+                    <h3 className="font-montserrat font-semibold text-[18px] text-black text-center capitalize">
+                      No {activeTab} Meetings Yet...
+                    </h3>
+                    <p className="font-montserrat font-normal text-grey text-[14px] text-center">
+                      {canManageMeetings && activeTab === "upcoming"
+                        ? "Create a meeting so employees can view it here."
+                        : "Meetings for this category will appear here."}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : null
           ) : null}
         </div>
       </div>
@@ -304,6 +386,35 @@ export const Meetings = ({ variant = "page" }) => {
           onButton1Click={() => setShowDeleteModal(false)}
           onButton2Click={handleConfirmDelete}
           onClose={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      {/* Complete Confirmation Modal */}
+      {showCompleteModal && (
+        <Customcard
+          heading="Mark as Completed"
+          content={
+            <div>
+              Are you sure you want to mark this meeting as completed?
+            </div>
+          }
+          button1Text={
+            <div className="flex items-center justify-center gap-2">
+              <img src={mediaData.Cancel} alt="cancel" className="w-5 h-5" />
+              <span>No, Cancel</span>
+            </div>
+          }
+          button2Text={
+            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+              <Check className="w-5 h-5" />
+              <span>Mark as Completed</span>
+            </div>
+          }
+          button1Bg="bg-gray-400"
+          button2Bg="bg-green-600 hover:bg-green-700 !w-auto !px-6 shadow-md"
+          onButton1Click={() => setShowCompleteModal(false)}
+          onButton2Click={confirmCompleteMeeting}
+          onClose={() => setShowCompleteModal(false)}
         />
       )}
 
