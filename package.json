@@ -5,12 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:full": "node -e \"const { spawn } = require('child_process'); const isWin = process.platform === 'win32'; const spawnNpm = (cwd, script) => isWin ? spawn('cmd.exe', ['/d','/s','/c','npm','run',script], { cwd, stdio: 'inherit' }) : spawn('npm', ['run', script], { cwd, stdio: 'inherit' }); const ping = async (url, ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); try { const r = await fetch(url, { signal: c.signal }); return r.ok; } catch { return false; } finally { clearTimeout(t); } }; (async () => { const backendUp = await ping('http://localhost:4000/api/health', 400); if (!backendUp) spawnNpm('backend', 'dev'); spawnNpm(process.cwd(), 'dev'); })();\"",
+    "start": "node backend/src/server.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.1.5",
+    "nodemailer": "^7.0.12",
     "formik": "^2.4.6",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",

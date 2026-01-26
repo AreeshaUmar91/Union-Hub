@@ -1,6 +1,8 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createDb } from "./db.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createDirectorUsersRouter } from "./routes/directorUsers.js";
@@ -15,6 +17,9 @@ if (!jwtSecret) throw new Error("JWT_SECRET is required");
 const db = createDb({ dbPath: process.env.DB_PATH });
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json({ limit: "1mb" }));
 app.use(
   cors({
@@ -30,6 +35,15 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", createAuthRouter({ db, jwtSecret }));
 app.use("/api/director/users", createDirectorUsersRouter({ db, jwtSecret }));
 app.use("/api/content", createContentRouter({ db, jwtSecret }));
+
+// Serve static files from the frontend dist directory
+const distPath = path.join(__dirname, "../../dist");
+app.use(express.static(distPath));
+
+// Handle client-side routing
+app.get("*", (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
+});
 
 // Connect to DB before listening
 db.connect()
