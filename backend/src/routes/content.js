@@ -7,7 +7,6 @@ const allowedTypes = new Set([
   "votes",
   "news",
   "employees",
-  "officials",
   "contracts",
   "benefits",
   "faqs",
@@ -30,7 +29,6 @@ export function createContentRouter({ db, jwtSecret }) {
     benefits: "Benefit",
     faqs: "FAQ",
     employees: "Employee",
-    officials: "Official",
     contracts: "Contract",
     notifications: "Notification Settings",
   };

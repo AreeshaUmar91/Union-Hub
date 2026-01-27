@@ -75,7 +75,7 @@ export const Employees = () => {
   const data = employeeRows.map((u) => ({
     __id: u.id,
     Email: { type: "text", value: u.email },
-    Password: { type: "text", value: role === "director" ? (u.password_plain || "") : "*****" },
+    Password: { type: "text", value: "*****" },
     Role: {
       type: "text",
       value: u.role

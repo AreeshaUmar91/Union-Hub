@@ -14,7 +14,6 @@ export const Dashboard = () => {
   const [news, setNews] = useState([]);
   const [polls, setPolls] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [officials, setOfficials] = useState([]);
   const [directorUsers, setDirectorUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -28,7 +27,6 @@ export const Dashboard = () => {
       apiRequest("/content/news", { token: auth.token }),
       apiRequest("/content/votes", { token: auth.token }),
       apiRequest("/content/notifications", { token: auth.token }),
-      apiRequest("/content/officials", { token: auth.token }),
       isDirectorOrPrincipal ? apiRequest("/director/users", { token: auth.token }) : Promise.resolve({ users: [] }),
     ])
       .then((results) => {
@@ -40,8 +38,7 @@ export const Dashboard = () => {
         const newsRes = getValue(1, { items: [] });
         const votesRes = getValue(2, { items: [] });
         const notificationsRes = getValue(3, { items: [] });
-        const officialsRes = getValue(4, { items: [] });
-        const directorUsersRes = getValue(5, { users: [] });
+        const directorUsersRes = getValue(4, { users: [] });
 
         setMeetings((meetingsRes.items || []).map((i) => ({ id: i.id, ...(i.data || {}) })));
         setNews(
@@ -56,14 +53,6 @@ export const Dashboard = () => {
 
         setNotifications(
           (notificationsRes.items || []).map((i) => ({
-            id: i.id,
-            created_at: i.created_at,
-            updated_at: i.updated_at,
-            ...(i.data || {}),
-          }))
-        );
-        setOfficials(
-          (officialsRes.items || []).map((i) => ({
             id: i.id,
             created_at: i.created_at,
             updated_at: i.updated_at,
@@ -179,25 +168,6 @@ export const Dashboard = () => {
       latestWhen: latest?.created_at ? formatDateTime(latest.created_at) : "—",
     };
   }, [directorUsers]);
-
-  const officialStats = useMemo(() => {
-    const sorted = officials
-      .slice()
-      .sort((a, b) => Date.parse(b.updated_at || b.created_at || 0) - Date.parse(a.updated_at || a.created_at || 0));
-    const latest = sorted[0] || null;
-
-    const formatDateTime = (iso) => {
-      const t = Date.parse(String(iso));
-      if (!Number.isFinite(t)) return "—";
-      return new Date(t).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    };
-
-    return {
-      total: officials.length,
-      latestName: latest?.name || latest?.title || "—",
-      latestWhen: latest?.updated_at || latest?.created_at ? formatDateTime(latest.updated_at || latest.created_at) : "—",
-    };
-  }, [officials]);
 
   const notificationStats = useMemo(() => {
     const sorted = notifications
@@ -319,21 +289,6 @@ export const Dashboard = () => {
               { label: "Tech Staff", value: isLoading ? "—" : employeeStats.techStaff },
             ]}
             onClick={() => navigate("/layout/employees")}
-          />
-        ) : null}
-
-        {isDirector ? (
-          <StatCard
-            title="Officials"
-            icon={mediaData.Official}
-            accent="bg-[#12B76A26]"
-            headline={isLoading ? "—" : `${officialStats.total} officials`}
-            rows={[
-              { label: "Latest", value: isLoading ? "—" : officialStats.latestName },
-              { label: "Updated", value: isLoading ? "—" : officialStats.latestWhen },
-              { label: "Total officials", value: isLoading ? "—" : officialStats.total },
-            ]}
-            onClick={() => navigate("/layout/officials")}
           />
         ) : null}
 

@@ -10,7 +10,6 @@ import {Employees} from "../Pages/Employees"
 import {Contracts} from "../Pages/Contracts"
 import {News} from "../Pages/News"
 import {Notifications} from "../Pages/Notifications"
-import {Officials} from "../Pages/Officials"
 import {Vote} from "../Pages/Vote"
 import {Faq} from "../Pages/Faq"
 import {Bell} from "../Pages/Bell"
@@ -44,7 +43,6 @@ export const publicRoutes =
         {path:"bell",element:<Bell/>},
         {path:"employees",element:(<RequireRole roles={["director","principal","vice_principal"]}><Employees/></RequireRole>)},
         {path:"contracts",element:(<RequireRole roles={["director"]}><Contracts/></RequireRole>)},
-        {path:"officials",element:(<RequireRole roles={["director"]}><Officials/></RequireRole>)},
         {path:"users",element:(<RequireRole roles={["director"]}><DirectorUsers/></RequireRole>)},
         {path:"admin",element:<Admin/>}
     ]

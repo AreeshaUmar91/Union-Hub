@@ -68,7 +68,7 @@ export const DirectorUsers = () => {
             .join(" ")
         : "",
     },
-    Password: { type: "text", value: u.password_plain || "••••••" },
+    Password: { type: "text", value: "••••••" },
     CreatedAt: { type: "text", value: u.created_at },
   }));
 

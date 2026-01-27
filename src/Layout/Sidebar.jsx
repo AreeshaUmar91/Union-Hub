@@ -12,7 +12,6 @@ const pages = [
   { name: "Manage FAQ's", route: "/layout/faq", icon: mediaData.Faq },
   { name: "Notifications", route: "/layout/notifications", icon: mediaData.Notification, roles: ["director", "principal", "vice_principal"] },
   { name: "Employees", route: "/layout/employees", icon: mediaData.Employees, roles: ["director", "principal", "vice_principal"] },
-  { name: "Officials", route: "/layout/officials", icon: mediaData.Official, roles: ["director"] },
   { name: "Contracts", route: "/layout/contracts", icon: mediaData.Contracts, roles: ["director"] },
 ];
 
