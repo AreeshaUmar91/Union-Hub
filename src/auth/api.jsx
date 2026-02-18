@@ -3,14 +3,27 @@ import { toast } from "sonner";
 import { CustomToast } from "../components/CustomToast";
 
 export async function apiRequest(path, { method = "GET", token, body } = {}) {
-  const res = await fetch(path.startsWith("/api") ? path : `/api${path}`, {
-    method,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(path.startsWith("/api") ? path : `/api${path}`, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("unionhub_network_ok"));
+    }
+  } catch {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("unionhub_network_error"));
+    }
+    const message = "Network error. Please check your connection.";
+    toast.custom((t) => <CustomToast id={t} message={message} />);
+    throw new Error(message);
+  }
 
   const text = await res.text();
   let data = null;
