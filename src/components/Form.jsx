@@ -22,6 +22,7 @@ function PasswordInput({ field, isNewEmployee, className }) {
           value={isControlled ? field.value : undefined}
           defaultValue={isControlled ? undefined : field.value || ""}
           onChange={field.onChange}
+          autoComplete={field.autoComplete || "new-password"}
           className={`w-full rounded-[12px] font-montserrat px-3 py-2 bg-[#F1F1F1] 
             focus:outline-none focus:ring-2 focus:ring-blue-400 
             ${field.icon ? "pl-10" : ""} pr-10
@@ -117,6 +118,7 @@ export function Form({ heading, fields = [], buttons = [], isNewEmployee }) {
                   value={field.value !== undefined ? field.value : undefined}
                   defaultValue={field.value !== undefined ? undefined : field.value || ""}
                   onChange={field.onChange}
+                  autoComplete={field.autoComplete || "off"}
                   className={`w-full rounded-[12px] font-montserrat px-3 py-2 bg-[#F1F1F1] 
                     focus:outline-none focus:ring-2 focus:ring-blue-400 
                     ${field.icon ? "pl-10" : ""}
@@ -134,7 +136,10 @@ export function Form({ heading, fields = [], buttons = [], isNewEmployee }) {
             <button
               key={idx}
               onClick={btn.onClick}
-              className={`py-3 rounded-[50px] font-montserrat text-center ${btn.className}`}
+              disabled={btn.disabled}
+              className={`py-3 rounded-[50px] font-montserrat text-center ${
+                btn.disabled ? "opacity-60 cursor-not-allowed" : ""
+              } ${btn.className}`}
             >
               {btn.label}
             </button>

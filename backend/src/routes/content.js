@@ -7,6 +7,7 @@ const allowedTypes = new Set([
   "votes",
   "news",
   "employees",
+  "officials",
   "contracts",
   "benefits",
   "faqs",
@@ -29,6 +30,7 @@ export function createContentRouter({ db, jwtSecret }) {
     benefits: "Benefit",
     faqs: "FAQ",
     employees: "Employee",
+    officials: "Official",
     contracts: "Contract",
     notifications: "Notification Settings",
   };
@@ -235,16 +237,19 @@ export function createContentRouter({ db, jwtSecret }) {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
+
+    if (type === "meetings" && req.body.status !== "completed") {
+      req.body.reminderSent = false;
+    }
+
     const item = await db.updateContent({ type, id, data: req.body });
     if (!item) {
       res.status(404).json({ error: "Not found" });
       return;
     }
 
-    // Notify Directors
     await notifyDirectors("Updated", type, item.data, req.user);
 
-    // Send broadcast email for meeting reschedule (update)
     if (type === "meetings" && req.body.status !== "completed") {
       (async () => {
         try {

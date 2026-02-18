@@ -13,6 +13,7 @@ export const DirectorUsers = () => {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("principal");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadUsers = useCallback(async () => {
     const data = await apiRequest("/director/users", {
@@ -27,11 +28,13 @@ export const DirectorUsers = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!email || !password || !role) {
       toast.custom((t) => <CustomToast id={t} message="Please fill all fields" type="error" />);
       return;
     }
     try {
+      setIsSubmitting(true);
       await apiRequest("/director/users", {
         method: "POST",
         token: auth.token,
@@ -45,6 +48,8 @@ export const DirectorUsers = () => {
       setShowCreateForm(false);
     } catch (err) {
       // Toast handled in apiRequest
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -68,7 +73,7 @@ export const DirectorUsers = () => {
             .join(" ")
         : "",
     },
-    Password: { type: "text", value: "••••••" },
+    Password: { type: "text", value: u.password_plain || "••••••" },
     CreatedAt: { type: "text", value: u.created_at },
   }));
 
@@ -150,15 +155,30 @@ export const DirectorUsers = () => {
               <button
                 type="button"
                 className="w-full sm:w-auto px-6 sm:px-[75px] py-2 bg-grey text-white rounded-3xl font-semibold"
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setEmail("");
+                  setPassword("");
+                  setRole("principal");
+                }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 sm:px-[50px] py-2 bg-primary text-white rounded-3xl font-semibold"
+                disabled={isSubmitting}
+                className={`w-full sm:w-auto px-6 sm:px-[50px] py-2 bg-primary text-white rounded-3xl font-semibold ${
+                  isSubmitting ? "opacity-60 cursor-not-allowed" : ""
+                }`}
               >
-                Create User
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  "Create User"
+                )}
               </button>
             </div>
           </form>

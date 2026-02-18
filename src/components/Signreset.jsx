@@ -1,5 +1,4 @@
 import { mediaData } from "../utils/mediaData";
-
 export const Signreset = ({ centerHeading, children, contentOffsetClassName = "" }) => {
   return (
     <div className="w-full min-h-screen lg:h-screen flex flex-col lg:flex-row bg-white lg:overflow-hidden">

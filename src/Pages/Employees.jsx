@@ -29,6 +29,7 @@ export const Employees = () => {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editConfirmPassword, setEditConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadUsers = useCallback(async () => {
     const data = await apiRequest("/director/users", { token: auth.token });
@@ -42,6 +43,11 @@ export const Employees = () => {
 
   const handleNewEmployeeClick = () => {
     setIsNewEmployee(true);
+    setEditUserId(null);
+    setEditRole("teacher");
+    setEditEmail("");
+    setEditPassword("");
+    setEditConfirmPassword("");
     setCreateRole("");
     setCreateEmail("");
     setCreatePassword("");
@@ -66,7 +72,6 @@ export const Employees = () => {
 
   const columns = [
     { header: "Email", key: "Email" },
-    { header: "Password", key: "Password" },
     { header: "Role", key: "Role" },
     { header: "Created At", key: "CreatedAt" },
     { header: "Action", key: "Action" },
@@ -75,7 +80,6 @@ export const Employees = () => {
   const data = employeeRows.map((u) => ({
     __id: u.id,
     Email: { type: "text", value: u.email },
-    Password: { type: "text", value: "*****" },
     Role: {
       type: "text",
       value: u.role
@@ -145,6 +149,7 @@ export const Employees = () => {
   ];
 
   const handleCreateAccount = async () => {
+    if (isSubmitting) return;
     if (!createRole) return;
     if (!createEmail || !createPassword) {
       toast.custom((t) => <CustomToast id={t} message="Please fill all fields" type="error" />);
@@ -156,6 +161,7 @@ export const Employees = () => {
       return;
     }
     try {
+      setIsSubmitting(true);
       const created = await apiRequest("/director/users", {
         method: "POST",
         token: auth.token,
@@ -184,6 +190,8 @@ export const Employees = () => {
       loadUsers().catch(() => {});
     } catch (e) {
       // Toast handled in apiRequest
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -198,6 +206,7 @@ export const Employees = () => {
   };
 
   const handleUpdateAccount = async () => {
+    if (isSubmitting) return;
     if (!editUserId) return;
     if (!editEmail) return;
     if (editPassword && editPassword !== editConfirmPassword) {
@@ -206,6 +215,7 @@ export const Employees = () => {
     }
 
     try {
+      setIsSubmitting(true);
       await apiRequest(`/director/users/${editUserId}`, {
         method: "PUT",
         token: auth.token,
@@ -221,6 +231,8 @@ export const Employees = () => {
       loadUsers().catch(() => {});
     } catch (e) {
       // Toast handled in apiRequest
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -261,8 +273,16 @@ export const Employees = () => {
           className: "bg-grey text-white hover:bg-gray-400 font-semibold font-montserrat w-full sm:w-auto px-6 sm:px-[60px]",
         },
         {
-          label: "Create Account",
+          label: isSubmitting ? (
+            <div className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Creating...</span>
+            </div>
+          ) : (
+            "Create Account"
+          ),
           onClick: handleCreateAccount,
+          disabled: isSubmitting,
           className: "bg-primary font-semibold font-montserrat text-white w-full sm:w-[200px] px-6 sm:px-9",
         },
       ]
@@ -273,8 +293,16 @@ export const Employees = () => {
           className: "bg-grey text-white hover:bg-gray-400 font-semibold font-montserrat w-full sm:w-auto px-6 sm:px-[60px]",
         },
         {
-          label: "Update ",
+          label: isSubmitting ? (
+            <div className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Updating...</span>
+            </div>
+          ) : (
+            "Update"
+          ),
           onClick: handleUpdateAccount,
+          disabled: isSubmitting,
           className: "bg-primary font-semibold font-montserrat text-white w-full sm:w-[200px] px-6 sm:px-9",
         },
       ];

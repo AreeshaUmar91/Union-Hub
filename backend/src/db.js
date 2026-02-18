@@ -368,7 +368,8 @@ export function createDb({ dbPath }) {
       const user = await User.findOne({ id });
       if (!user) return null;
       const currentRole = user.role;
-      if (currentRole !== "principal" && currentRole !== "teacher" && currentRole !== "employee") return null;
+      const manageableRoles = new Set(["principal", "teacher", "employee", "vice_principal", "tech_staff"]);
+      if (!manageableRoles.has(currentRole)) return null;
       if (email !== undefined) {
         const nextEmail = String(email).toLowerCase();
         const conflict = await User.findOne({ email: nextEmail, id: { $ne: id } });

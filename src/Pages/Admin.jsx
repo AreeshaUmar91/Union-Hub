@@ -71,7 +71,7 @@ export const Admin = () => {
     <div className="flex flex-col gap-6 bg-white rounded-3xl h-full p-6 font-montserrat">
       {/* Heading */}
       <div className="border-b pb-3">
-        <h2 className="text-black font-semibold text-[20px]">{roleTitle} Details</h2>
+        <h2 className="text-black font-semibold text-[20px]">Account Details</h2>
       </div>
 
       {/* Name & Email Container */}
@@ -90,6 +90,7 @@ export const Admin = () => {
               setName(e.target.value);
             }}
             placeholder="John Doe"
+            autoComplete="off"
             className="flex-1 bg-[#F1F1F1] rounded-lg px-3 py-2 focus:outline-none text-black placeholder-gray-500"
           />
         </div>
@@ -106,6 +107,7 @@ export const Admin = () => {
               setEmail(e.target.value);
             }}
             placeholder="johndoe@gmail.com"
+            autoComplete="off"
             className={`flex-1 bg-[#F1F1F1] rounded-lg px-3 py-2 focus:outline-none text-black placeholder-gray-500 ${!isDirector ? "opacity-50 cursor-not-allowed" : ""}`}
           />
         </div>
@@ -124,6 +126,7 @@ export const Admin = () => {
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Enter Current Password"
+            autoComplete="off"
             className="flex-1 bg-[#F1F1F1] rounded-lg px-3 py-2 focus:outline-none text-black placeholder-gray-500"
           />
         </div>
@@ -136,6 +139,7 @@ export const Admin = () => {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Enter New Password"
+            autoComplete="off"
             className="flex-1 bg-[#F1F1F1] rounded-lg px-3 py-2 focus:outline-none text-black placeholder-gray-500"
           />
         </div>
@@ -148,6 +152,7 @@ export const Admin = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm Password"
+            autoComplete="off"
             className="flex-1 bg-[#F1F1F1] rounded-lg px-3 py-2 focus:outline-none text-black placeholder-gray-500"
           />
         </div>

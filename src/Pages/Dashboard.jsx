@@ -14,6 +14,7 @@ export const Dashboard = () => {
   const [news, setNews] = useState([]);
   const [polls, setPolls] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [officials, setOfficials] = useState([]);
   const [directorUsers, setDirectorUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,6 +28,7 @@ export const Dashboard = () => {
       apiRequest("/content/news", { token: auth.token }),
       apiRequest("/content/votes", { token: auth.token }),
       apiRequest("/content/notifications", { token: auth.token }),
+      apiRequest("/content/officials", { token: auth.token }),
       isDirectorOrPrincipal ? apiRequest("/director/users", { token: auth.token }) : Promise.resolve({ users: [] }),
     ])
       .then((results) => {
@@ -38,7 +40,8 @@ export const Dashboard = () => {
         const newsRes = getValue(1, { items: [] });
         const votesRes = getValue(2, { items: [] });
         const notificationsRes = getValue(3, { items: [] });
-        const directorUsersRes = getValue(4, { users: [] });
+        const officialsRes = getValue(4, { items: [] });
+        const directorUsersRes = getValue(5, { users: [] });
 
         setMeetings((meetingsRes.items || []).map((i) => ({ id: i.id, ...(i.data || {}) })));
         setNews(
@@ -53,6 +56,14 @@ export const Dashboard = () => {
 
         setNotifications(
           (notificationsRes.items || []).map((i) => ({
+            id: i.id,
+            created_at: i.created_at,
+            updated_at: i.updated_at,
+            ...(i.data || {}),
+          }))
+        );
+        setOfficials(
+          (officialsRes.items || []).map((i) => ({
             id: i.id,
             created_at: i.created_at,
             updated_at: i.updated_at,
@@ -169,6 +180,25 @@ export const Dashboard = () => {
     };
   }, [directorUsers]);
 
+  const officialStats = useMemo(() => {
+    const sorted = officials
+      .slice()
+      .sort((a, b) => Date.parse(b.updated_at || b.created_at || 0) - Date.parse(a.updated_at || a.created_at || 0));
+    const latest = sorted[0] || null;
+
+    const formatDateTime = (iso) => {
+      const t = Date.parse(String(iso));
+      if (!Number.isFinite(t)) return "—";
+      return new Date(t).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    };
+
+    return {
+      total: officials.length,
+      latestName: latest?.name || latest?.title || "—",
+      latestWhen: latest?.updated_at || latest?.created_at ? formatDateTime(latest.updated_at || latest.created_at) : "—",
+    };
+  }, [officials]);
+
   const notificationStats = useMemo(() => {
     const sorted = notifications
       .slice()
@@ -253,7 +283,11 @@ export const Dashboard = () => {
           title="Vote"
           icon={mediaData.Vote}
           accent="bg-[#FF8A1426]"
-          headline={isLoading ? "—" : `${voteStats.totalPolls} polls`}
+          headline={
+            isLoading
+              ? "—"
+              : `${voteStats.totalPolls} ${voteStats.totalPolls === 1 ? "poll" : "polls"}`
+          }
           rows={[
             { label: "Candidates", value: isLoading ? "—" : voteStats.totalCandidates },
             { label: "Votes cast", value: isLoading ? "—" : voteStats.totalVotes },
@@ -266,7 +300,11 @@ export const Dashboard = () => {
           title="News & Updates"
           icon={mediaData.News}
           accent="bg-[#9B05B926]"
-          headline={isLoading ? "—" : `${newsStats.total} posts`}
+          headline={
+            isLoading
+              ? "—"
+              : `${newsStats.total} ${newsStats.total === 1 ? "post" : "posts"}`
+          }
           rows={[
             { label: "Latest", value: isLoading ? "—" : newsStats.latestTitle },
             { label: "Updated", value: isLoading ? "—" : newsStats.latestWhen },
@@ -280,15 +318,37 @@ export const Dashboard = () => {
             title="Employees"
             icon={mediaData.Employees}
             accent="bg-[#007FFF26]"
-            headline={isLoading ? "—" : `${employeeStats.total} accounts`}
+            headline={
+              isLoading
+                ? "—"
+                : `${employeeStats.total} ${employeeStats.total === 1 ? "account" : "accounts"}`
+            }
             rows={[
-              // { label: "Employees", value: isLoading ? "—" : employeeStats.employees },
               { label: "Principals", value: isLoading ? "—" : employeeStats.principals },
               { label: "Vice Principals", value: isLoading ? "—" : employeeStats.vicePrincipals },
               { label: "Teachers", value: isLoading ? "—" : employeeStats.teachers },
               { label: "Tech Staff", value: isLoading ? "—" : employeeStats.techStaff },
             ]}
             onClick={() => navigate("/layout/employees")}
+          />
+        ) : null}
+
+        {isDirector ? (
+          <StatCard
+            title="Officials"
+            icon={mediaData.Official}
+            accent="bg-[#12B76A26]"
+            headline={
+              isLoading
+                ? "—"
+                : `${officialStats.total} ${officialStats.total === 1 ? "official" : "officials"}`
+            }
+            rows={[
+              { label: "Latest", value: isLoading ? "—" : officialStats.latestName },
+              { label: "Updated", value: isLoading ? "—" : officialStats.latestWhen },
+              { label: "Total officials", value: isLoading ? "—" : officialStats.total },
+            ]}
+            onClick={() => navigate("/layout/officials")}
           />
         ) : null}
 
